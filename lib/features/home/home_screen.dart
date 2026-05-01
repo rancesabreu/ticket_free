@@ -57,6 +57,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Abre la pantalla para agregar un nuevo ticket.
+  /// Navega a la ruta '/add-ticket' y recarga la lista si se agregó un ticket.
+  Future<void> openAddTicket() async {
+    final result = await context.push<bool>('/add-ticket');
+    if (result == true) {
+      await loadTickets();
+    }
+  }
+
   void openscanner() async {
     await Navigator.push(
       context,
@@ -77,7 +86,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home Screen')),
+      appBar: AppBar(
+        title: const Text('Home Screen'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.add),
+            tooltip: 'Opciones',
+            onSelected: (value) {
+              if (value == 'add_ticket') {
+                openAddTicket();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'add_ticket',
+                child: Text('Agregar ticket'),
+              ),
+            ],
+          ),
+        ],
+      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,

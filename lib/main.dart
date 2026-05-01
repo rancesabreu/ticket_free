@@ -5,9 +5,9 @@ import 'package:ticket_free/config/router/app_router.dart';
 
 Future<void> main() async {
   await Supabase.initialize(
-    url: 'https://alfrcmmtzjomjzjyqcgr.supabase.co/',
+    url: 'https://lquauwdimhlhtqzkjisn.supabase.co/',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsZnJjbW10empvbWp6anlxY2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMDM0ODUsImV4cCI6MjA2NDg3OTQ4NX0.9NodOV19w44ouVeN_Q6SgWp0_t9GdI1hlfVsFnYn3yM',
+        'sb_publishable_UTc8K-1M4-PW-D5C9q2yZA_bTL4Ypgn',
   );
   runApp(const MyApp());
 }

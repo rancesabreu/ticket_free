@@ -6,6 +6,8 @@ class EventTicket {
   final String? buyerIdentification;
   final bool isProcessed;
   final String? vendorId;
+  final String section; // Sección de estudio del vendedor que registra el ticket
+  final String? vendorEmail; // Email del vendedor que registra el ticket
   final EventVendor? eventVendors;
 
   EventTicket({
@@ -15,7 +17,9 @@ class EventTicket {
     this.buyerName,
     this.buyerIdentification,
     required this.isProcessed,
+    required this.section,
     this.vendorId,
+    this.vendorEmail,
     this.eventVendors,
   });
 
@@ -27,7 +31,9 @@ class EventTicket {
       buyerName: json['buyer_name'] as String?,
       buyerIdentification: json['buyer_identification'] as String?,
       isProcessed: json['is_processed'] as bool,
+      section: json['section'] as String? ?? '',
       vendorId: json['vendor_id'] as String?,
+      vendorEmail: json['vendor_email'] as String?,
       eventVendors:
           json['event_vendors'] != null
               ? EventVendor.fromJson(json['event_vendors'])
@@ -42,7 +48,9 @@ class EventTicket {
         'buyer_name': buyerName,
         'buyer_identification': buyerIdentification,
         'is_processed': isProcessed,
+        'section': section,
         'vendor_id': vendorId,
+        'vendor_email': vendorEmail,
         'event_vendors': eventVendors?.toJson(),
       };
     }
