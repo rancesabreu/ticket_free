@@ -31,8 +31,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
         borderColor = Colors.orangeAccent;
       } else if (result == 'Código no existe') {
         borderColor = Colors.redAccent;
-      } else {
+      } else if (result == 'Código QR vacío' || result == 'Formato de código QR inválido.') {
         borderColor = Colors.blueGrey;
+      } else {
+        borderColor = Colors.grey;
       }
 
       showDialog(

@@ -1,34 +1,47 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'package:ticket_free/features/auth/infraestructure/event_ticket.dart';
 
 class EventTicketService {
   final SupabaseClient supabase = Supabase.instance.client;
 
   Future<String> validateProcessTicket(String code) async {
-    final partes = code.split(';');
-    if (partes.length != 2) throw Exception('Formato de código QR inválido.');
+    // formato esperado: "23;11c8ee23-bc32-4aec-9a71-97732e1e5829"
 
-    final id = partes[1];
+    try {
+      if (code.isEmpty) {
+        return 'Código QR vacío';
+      }
 
-    // Buscar ticket en la base
-    final existing = await getTicketById(id);
+      final partes = code.split(';');
 
-    if (existing == null) {
-      return 'Código no existe';
-    }
+      if (partes.length != 2) {
+        return 'Formato de código QR inválido.';
+      }
 
-    if (existing.isProcessed) {
-      return 'Ticket usado';
-    }
+      final id = partes[1].trim();
 
-    // Actualizar como procesado
-    final updated = await markTicketAsProcessed(id);
-    if (updated) {
-      return 'Procesado con éxito';
-    } else {
-      throw Exception('Error al actualizar el ticket.');
+      // Buscar ticket en la base
+      final existing = await getTicketById(id);
+
+      if (existing == null) {
+        return 'Código no existe';
+      }
+
+      if (existing.isProcessed) {
+        return 'Ticket usado';
+      }
+
+      // Actualizar como procesado
+      final updated = await markTicketAsProcessed(id);
+      if (updated) {
+        return 'Procesado con éxito';
+      } else {
+        return 'Error al actualizar el ticket, intente nuevamente.';
+      }
+    } catch (e) {
+      debugPrint('Error validando ticket: $e');
+      return 'Error no esperado al validar el ticket.';
     }
   }
 
@@ -80,7 +93,6 @@ class EventTicketService {
   }) async {
     try {
       final String mock_vendor_id = '49bf50ce-505c-4025-83df-f050ef0dbe2a';
-      
 
       final List response =
           await supabase.from('event_tickets_qr').insert({
@@ -92,14 +104,13 @@ class EventTicketService {
             'vendor_id': mock_vendor_id,
           }).select();
 
-          print("Response from insert: $response");
+      print("Response from insert: $response");
 
-      if(response.isNotEmpty) {
+      if (response.isNotEmpty) {
         return (true, 'Ticket creado exitosamente');
       }
 
       return (false, 'Error al crear el ticket');
-
     } on PostgrestException catch (e) {
       // Verificamos el código de error específico de clave duplicada
 

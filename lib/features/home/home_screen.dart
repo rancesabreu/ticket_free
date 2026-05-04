@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ticket_free/features/auth/infraestructure/event_ticket.dart';
+import 'package:ticket_free/features/auth/presentation/service/spbase_auth_service.dart';
 import 'package:ticket_free/features/auth/shared/services/event_ticket_service.dart';
 import 'package:ticket_free/features/shared/scanner/qr_scanner_page.dart';
 import 'package:ticket_free/features/home/tickets_list_view.dart';
@@ -16,10 +17,12 @@ enum TicketView { procesados, faltantes }
 
 class _HomeScreenState extends State<HomeScreen> {
   final EventTicketService ticketService = EventTicketService();
+  final SpbaseAuthService _authService = SpbaseAuthService();
 
   List<EventTicket> listaProcesados = [];
   List<EventTicket> listaFaltantes = [];
   bool isLoading = true;
+  String userName = 'Usuario';
 
   late PageController pageController;
   TicketView vistaActual = TicketView.procesados;
@@ -29,6 +32,16 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     pageController = PageController(initialPage: 0);
     loadTickets();
+    loadUserName();
+  }
+
+  Future<void> loadUserName() async {
+    final userInfo = await _authService.getCurrentUserName();
+    if (mounted) {
+      setState(() {
+        userName = userInfo?.name ?? 'Usuario';
+      });
+    }
   }
 
   Future<void> loadTickets() async {
@@ -60,11 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Abre la pantalla para agregar un nuevo ticket.
   /// Navega a la ruta '/add-ticket' y recarga la lista si se agregó un ticket.
   Future<void> openAddTicket() async {
-    final result = await context.push<bool>('/add-ticket');
-    if (result == true) {
+    // Esperar el resultado de la pantalla de agregar ticket (true si se agregó un ticket)
+    await context.push<bool>('/add-ticket');
+
+    // Si se agregó un ticket (result == true), recarga la lista de tickets.
       await loadTickets();
     }
-  }
 
   void openscanner() async {
     await Navigator.push(
@@ -110,11 +124,22 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.deepPurple),
-              child: Text(
-                'Menú',
-                style: TextStyle(color: Colors.white, fontSize: 24),
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.deepPurple),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Text(
+                    'Menú',
+                    style: TextStyle(color: Colors.white, fontSize: 24),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hola, $userName',
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
               ),
             ),
             ListTile(
