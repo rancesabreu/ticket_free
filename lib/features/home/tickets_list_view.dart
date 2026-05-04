@@ -16,7 +16,11 @@ class TicketsListView extends StatelessWidget {
       itemBuilder: (context, index) {
         final ticket = tickets[index];
         return ListTile(
-          leading: CircleAvatar(child: Text('${ticket.idSerie}')),
+          leading: CircleAvatar(
+            backgroundColor: Theme.of(context).colorScheme.primaryFixed,
+            child: Text('${ticket.idSerie}'),
+          
+          ),
           // title: Text(ticket.id),
           title: Text('${ticket.buyerName}'),
           subtitle: Column(
