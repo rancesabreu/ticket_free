@@ -92,7 +92,8 @@ class EventTicketService {
     String? vendorId,
   }) async {
     try {
-      final String mock_vendor_id = '49bf50ce-505c-4025-83df-f050ef0dbe2a';
+      final currentUser = supabase.auth.currentUser;
+      final String finalVendorId = vendorId ?? currentUser?.id ??'49bf50ce-505c-4025-83df-f050ef0dbe2a';
 
       final List response =
           await supabase.from('event_tickets_qr').insert({
@@ -101,10 +102,8 @@ class EventTicketService {
             'buyer_identification': buyerIdentification,
             'is_processed': false,
             'section': section,
-            'vendor_id': mock_vendor_id,
+            'vendor_id': finalVendorId, // Usamos la variable dinámica
           }).select();
-
-      print("Response from insert: $response");
 
       if (response.isNotEmpty) {
         return (true, 'Ticket creado exitosamente');
@@ -113,9 +112,6 @@ class EventTicketService {
       return (false, 'Error al crear el ticket');
     } on PostgrestException catch (e) {
       // Verificamos el código de error específico de clave duplicada
-
-      print("Error exception code: ${e.code}");
-
       if (e.code == '23505') {
         return (false, 'Error: El número de serie ya existe');
       }

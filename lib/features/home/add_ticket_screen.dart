@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ticket_free/features/auth/presentation/service/spbase_auth_service.dart';
 import 'package:ticket_free/features/auth/shared/services/event_ticket_service.dart';
 import 'package:ticket_free/features/auth/shared/services/section_service.dart';
 
@@ -20,8 +21,44 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
       TextEditingController();
   final EventTicketService _ticketService = EventTicketService();
   final SectionService _sectionService = SectionService();
+
+  // Instancia del servicio de autenticación para obtener el ID del usuario actual
+  final SpbaseAuthService _authService = SpbaseAuthService();
+
   String _selectedSection = 'a';
   bool _isSaving = false;
+  bool _isLoadingUser = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSection();
+  }
+
+  /// Carga los datos del usuario actual para preseleccionar la sección en el formulario.
+  Future<void> _loadUserSection() async {
+    try {
+      final userData = await _authService.getCurrentUserName();
+      if (userData != null && mounted /*userData.section.isNotEmpty*/ ) {
+        final section = userData.section.toLowerCase();
+
+        // Verificamos si la sección del usuario es válida antes de asignarla o existe en la lista de secciones disponibles
+        if (_sectionService.getSections().contains(section)) {
+          setState(() {
+            _selectedSection = section;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error cargando datos del usuario: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingUser = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -46,7 +83,8 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
     try {
       final (success, message) = await _ticketService.createTicket(
         idSerie: int.parse(_serieController.text.trim()),
-        section: _selectedSection,
+        section:
+            _selectedSection, // Utiliza la sección seleccionada en el formulario
         buyerName:
             _buyerNameController.text.trim().isEmpty
                 ? null
@@ -55,6 +93,7 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
             _buyerIdentificationController.text.trim().isEmpty
                 ? null
                 : _buyerIdentificationController.text.trim(),
+                
       );
 
       if (!mounted) return;
@@ -115,7 +154,7 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {   
+    } finally {
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -126,6 +165,9 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingUser) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Agregar Ticket')),
       body: SafeArea(
@@ -199,7 +241,6 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Sección',
                       border: OutlineInputBorder(),
-                      hintText: 'Selecciona la sección de estudio del vendedor',
                     ),
                     items:
                         _sectionService.getSections().map((section) {
@@ -208,13 +249,8 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
                             child: Text(section.toUpperCase()),
                           );
                         }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedSection = value;
-                        });
-                      }
-                    },
+                        // Al pasar "null" a onChanged, el componente se deshabilita visualmente.
+                    onChanged: null,
                     validator: (value) {
                       if (!_sectionService.isValidSection(value)) {
                         return 'Selecciona una sección válida';
@@ -224,7 +260,7 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
                   ),
                   const SizedBox(height: 30),
                   // Botón para guardar el ticket
-                  ElevatedButton(                    
+                  ElevatedButton(
                     onPressed: _isSaving ? null : _submit,
                     child:
                         _isSaving
