@@ -19,13 +19,18 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
   final TextEditingController _buyerNameController = TextEditingController();
   final TextEditingController _buyerIdentificationController =
       TextEditingController();
+
+  // Nuevo controlador para mostrar la sección del vendedor (solo lectura)
+  final TextEditingController _sectionController = TextEditingController();
+
   final EventTicketService _ticketService = EventTicketService();
   final SectionService _sectionService = SectionService();
-
   // Instancia del servicio de autenticación para obtener el ID del usuario actual
   final SpbaseAuthService _authService = SpbaseAuthService();
 
-  String _selectedSection = 'a';
+  String _selectedSection = '';
+  String _vendorUserId =
+      ''; // Guardamos el ID del vendedor para asignarlo al ticket
   bool _isSaving = false;
   bool _isLoadingUser = true;
 
@@ -41,11 +46,13 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
       final userData = await _authService.getCurrentUserName();
       if (userData != null && mounted /*userData.section.isNotEmpty*/ ) {
         final section = userData.section.toLowerCase();
-
+        _vendorUserId = userData.vendorUserId;
         // Verificamos si la sección del usuario es válida antes de asignarla o existe en la lista de secciones disponibles
         if (_sectionService.getSections().contains(section)) {
           setState(() {
             _selectedSection = section;
+            // Valor al controlador de solo lectura para mostrar la sección del vendedor
+            _sectionController.text = "Sección Asignada: ${section.toUpperCase()}";
           });
         }
       }
@@ -65,15 +72,18 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
     _serieController.dispose();
     _buyerNameController.dispose();
     _buyerIdentificationController.dispose();
+    _sectionController.dispose();
     super.dispose();
   }
 
   /// Valida el formulario y guarda el ticket en la base de datos.
   /// Muestra mensajes de éxito o error según el resultado.
   Future<void> _submit() async {
+
     // 1. Guardián para evitar ejecuciones concurrentes
     if (_isSaving) return;
 
+    // Validar el formulario antes de iniciar el proceso de guardado
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -81,10 +91,12 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
     });
 
     try {
+      // Enviamos la información del ticket al servicio para crear el registro en la base de datos
       final (success, message) = await _ticketService.createTicket(
         idSerie: int.parse(_serieController.text.trim()),
         section:
             _selectedSection, // Utiliza la sección seleccionada en el formulario
+        vendorUserId: _vendorUserId, // Asignamos el ID del vendedor al ticket
         buyerName:
             _buyerNameController.text.trim().isEmpty
                 ? null
@@ -93,12 +105,17 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
             _buyerIdentificationController.text.trim().isEmpty
                 ? null
                 : _buyerIdentificationController.text.trim(),
-                
       );
 
       if (!mounted) return;
-
       if (success) {
+        // LIMPIEZA DEL FORMULARIO
+        _serieController.clear();
+        _buyerNameController.clear();
+        _buyerIdentificationController.clear();
+        // No limpiamos la sección para que el usuario pueda agregar varios tickets de la misma sección
+
+// FeedBack de exito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -154,6 +171,7 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
           backgroundColor: Colors.red,
         ),
       );
+      await Future.delayed(const Duration(microseconds: 500)); // Pequeña pausa para mostrar el mensaje
     } finally {
       if (mounted) {
         setState(() {
@@ -235,33 +253,25 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Selector de sección donde estudia el vendedor del ticket
-                  DropdownButtonFormField<String>(
-                    value: _selectedSection,
-                    isExpanded: true,
+                  TextFormField(
+                    controller: _sectionController,
+                    readOnly: true,
+                    enabled:
+                        false, // Deshabilitamos el campo para que no sea editable
                     decoration: const InputDecoration(
                       labelText: 'Sección',
                       border: OutlineInputBorder(),
+                      filled: true,
                     ),
-                    items:
-                        _sectionService.getSections().map((section) {
-                          return DropdownMenuItem(
-                            value: section,
-                            child: Text(section.toUpperCase()),
-                          );
-                        }).toList(),
-                        // Al pasar "null" a onChanged, el componente se deshabilita visualmente.
-                    onChanged: null,
-                    validator: (value) {
-                      if (!_sectionService.isValidSection(value)) {
-                        return 'Selecciona una sección válida';
-                      }
-                      return null;
-                    },
                   ),
+
                   const SizedBox(height: 30),
                   // Botón para guardar el ticket
                   ElevatedButton(
                     onPressed: _isSaving ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      disabledBackgroundColor: Colors.grey.shade300,
+                    ),
                     child:
                         _isSaving
                             ? const SizedBox(

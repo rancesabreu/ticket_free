@@ -30,7 +30,7 @@ class SpbaseAuthService implements AuthService {
   }
 
  /// Retorna un Record con el nombre y la sección del usuario.
-  Future<({String name, String section})?> getCurrentUserName() async {
+  Future<({String name, String section, String vendorUserId})?> getCurrentUserName() async {
     final user = _supabaseClient.auth.currentUser;
     if (user == null) return null;
 
@@ -45,15 +45,17 @@ class SpbaseAuthService implements AuthService {
         // Extraemos los valores del JSON
         final String name = data['name']?.toString() ?? user.email ?? user.id;
         final String section = data['section']?.toString() ?? '';
+        // Si no viene el vendor_user_id, se asigna una cadena vacía para evitar errores de nullabilidad
+        final String vendorUserId = data['vendorUserId']?.toString() ?? '';
 
-        return (name: name, section: section);
+        return (name: name, section: section, vendorUserId: vendorUserId);
       } catch (e) {
         // Fallback en caso de que sea solo texto plano
-        return (name: displayNameString, section: '');
+        return (name: 'No Encontrado', section: '', vendorUserId: '');
       }
     }
 
     // Fallback si no hay metadata
-    return (name: user.email ?? user.id, section: '');
+    return (name: 'No Encontrado', section: '', vendorUserId: '');
   }
 }

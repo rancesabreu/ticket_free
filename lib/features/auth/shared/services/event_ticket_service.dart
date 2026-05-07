@@ -87,13 +87,14 @@ class EventTicketService {
   Future<(bool, String)> createTicket({
     required int idSerie,
     required String section,
+    required String vendorUserId,
     String? buyerName,
     String? buyerIdentification,
-    String? vendorId,
   }) async {
     try {
-      final currentUser = supabase.auth.currentUser;
-      final String finalVendorId = vendorId ?? currentUser?.id ??'49bf50ce-505c-4025-83df-f050ef0dbe2a';
+      final String finalVendorId = vendorUserId.isNotEmpty
+          ? vendorUserId
+          : (supabase.auth.currentUser?.id ?? 'ID_DESCONOCIDO');
 
       final List response =
           await supabase.from('event_tickets_qr').insert({
@@ -102,7 +103,7 @@ class EventTicketService {
             'buyer_identification': buyerIdentification,
             'is_processed': false,
             'section': section,
-            'vendor_id': finalVendorId, // Usamos la variable dinámica
+            'vendor_id': finalVendorId, // ID especifico del vendedor o ID del usuario autenticado
           }).select();
 
       if (response.isNotEmpty) {
