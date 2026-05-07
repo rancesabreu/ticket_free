@@ -88,6 +88,7 @@ class EventTicketService {
     required int idSerie,
     required String section,
     required String vendorUserId,
+    String? responsibleId,
     String? buyerName,
     String? buyerIdentification,
   }) async {
@@ -104,6 +105,7 @@ class EventTicketService {
             'is_processed': false,
             'section': section,
             'vendor_id': finalVendorId, // ID especifico del vendedor o ID del usuario autenticado
+            'responsible_id': responsibleId,
           }).select();
 
       if (response.isNotEmpty) {

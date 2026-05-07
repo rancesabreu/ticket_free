@@ -15,36 +15,69 @@ class _LoginScreenState extends State<LoginScreen> {
   String _password = '';
   final SpbaseAuthService _authService = SpbaseAuthService();
 
+  // 1. Variable para controlar el estado de carga
+  bool _isLoading = false;
+
   void _submit() async {
+    // Evitar multiples envíos mientras se procesa la solicitud
+    if (_isLoading) return;
+
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      final success = await _authService.login(_email, _password);
+      setState(() {
+        _isLoading = true; // Iniciar carga
+      });
 
-      if (success) {
-        context.go('/home');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Credenciales incorrectas'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      try {
+        final success = await _authService.login(_email, _password);
+
+        if (!mounted)
+          return; // Verificar si el widget sigue montado antes de actualizar el estado
+
+        if (success) {
+          context.go('/home');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Credenciales incorrectas'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error de conexión. Intenta nuevamente.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // Finalizar carga
+          });
+        }
       }
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
+          child: SingleChildScrollView( // Añadido para evitar overflow con el teclado
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
-                onPressed: () => context.go('/'),
+                onPressed: _isLoading ? null : () => context.go('/'),
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
               ),
               const SizedBox(height: 10),
@@ -59,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextFormField(
+                      enabled: !_isLoading, // Deshabilitar campo durante carga
                       decoration: const InputDecoration(labelText: 'Correo'),
                       keyboardType: TextInputType.emailAddress,
                       onSaved: (value) => _email = value!,
@@ -67,6 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               value!.isEmpty ? 'Ingresa tu correo' : null,
                     ),
                     TextFormField(
+                      enabled: !_isLoading, // Deshabilitar campo durante carga
                       decoration: const InputDecoration(
                         labelText: 'Contraseña',
                       ),
@@ -79,18 +114,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 50),
               Align(
-                alignment: Alignment.centerRight,
+                alignment: Alignment.center,
                 child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Iniciar Sesión'),
+                  onPressed: _isLoading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                   :  const Text('Iniciar Sesión'),
                 ),
               ),
             ],
           ),
         ),
       ),
+      )
     );
   }
 }

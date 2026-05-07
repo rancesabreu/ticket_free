@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ticket_free/features/auth/infraestructure/event_responsible.dart';
+import 'package:ticket_free/features/auth/presentation/service/responsible_ticket_services.dart';
 import 'package:ticket_free/features/auth/presentation/service/spbase_auth_service.dart';
 import 'package:ticket_free/features/auth/shared/services/event_ticket_service.dart';
 import 'package:ticket_free/features/auth/shared/services/section_service.dart';
@@ -25,6 +27,8 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
 
   final EventTicketService _ticketService = EventTicketService();
   final SectionService _sectionService = SectionService();
+  final ResponsibleTicketServices _responsibleService =
+      ResponsibleTicketServices();
   // Instancia del servicio de autenticación para obtener el ID del usuario actual
   final SpbaseAuthService _authService = SpbaseAuthService();
 
@@ -33,6 +37,10 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
       ''; // Guardamos el ID del vendedor para asignarlo al ticket
   bool _isSaving = false;
   bool _isLoadingUser = true;
+
+  List<EventResponsible> _responsibles = [];
+  String? _selectedResponsibleId; // ID del estudiante responsable seleccionado
+  bool _isLoadingResponsibles = false;
 
   @override
   void initState() {
@@ -52,8 +60,10 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
           setState(() {
             _selectedSection = section;
             // Valor al controlador de solo lectura para mostrar la sección del vendedor
-            _sectionController.text = "Sección Asignada: ${section.toUpperCase()}";
+            _sectionController.text =
+                "Sección Asignada: ${section.toUpperCase()}";
           });
+          _loadResponsibles(section);
         }
       }
     } catch (e) {
@@ -62,6 +72,28 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
       if (mounted) {
         setState(() {
           _isLoadingUser = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadResponsibles(String section) async {
+    setState(() {
+      _isLoadingResponsibles = true;
+    });
+    try {
+      // Llamada al servicio para obtener los responsables filtrados por sección
+      final responsibles =
+          await _responsibleService.getResponsiblesBySection(section);
+      setState(() {
+        _responsibles = responsibles;
+      });
+    } catch (e) {
+      debugPrint('Error cargando responsables: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingResponsibles = false;
         });
       }
     }
@@ -79,7 +111,6 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
   /// Valida el formulario y guarda el ticket en la base de datos.
   /// Muestra mensajes de éxito o error según el resultado.
   Future<void> _submit() async {
-
     // 1. Guardián para evitar ejecuciones concurrentes
     if (_isSaving) return;
 
@@ -95,8 +126,10 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
       final (success, message) = await _ticketService.createTicket(
         idSerie: int.parse(_serieController.text.trim()),
         section:
-            _selectedSection, // Utiliza la sección seleccionada en el formulario
+            _selectedSection
+                .toUpperCase(), // Utiliza la sección seleccionada en el formulario
         vendorUserId: _vendorUserId, // Asignamos el ID del vendedor al ticket
+        responsibleId: _selectedResponsibleId,
         buyerName:
             _buyerNameController.text.trim().isEmpty
                 ? null
@@ -113,9 +146,12 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
         _serieController.clear();
         _buyerNameController.clear();
         _buyerIdentificationController.clear();
+        setState(() {
+          _selectedResponsibleId = null;
+        });
         // No limpiamos la sección para que el usuario pueda agregar varios tickets de la misma sección
 
-// FeedBack de exito
+        // FeedBack de exito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -171,7 +207,9 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      await Future.delayed(const Duration(microseconds: 500)); // Pequeña pausa para mostrar el mensaje
+      await Future.delayed(
+        const Duration(microseconds: 500),
+      ); // Pequeña pausa para mostrar el mensaje
     } finally {
       if (mounted) {
         setState(() {
@@ -264,6 +302,39 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
                       filled: true,
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                    _isLoadingResponsibles
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                            value: _selectedResponsibleId,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: 'Estudiante responsable',
+                              border: OutlineInputBorder(),
+                              // Si no hay responsables disponibles, mostramos un mensaje en el hint
+
+                            ),
+                            hint: const Text('Selecciona el estudiante'),
+                            items: _responsibles.map<DropdownMenuItem<String>>((EventResponsible res){
+                              return DropdownMenuItem<String>(
+                                value: res.studentId,                                
+                                child: Text(res.name),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedResponsibleId = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Selecciona un estudiante responsable';
+                              }
+                              return null;
+                            },
+                          ),
 
                   const SizedBox(height: 30),
                   // Botón para guardar el ticket
