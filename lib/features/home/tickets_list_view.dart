@@ -22,11 +22,10 @@ class TicketsListView extends StatelessWidget {
           
           ),
           // title: Text(ticket.id),
-          title: Text('${ticket.buyerName}'),
+          title: Text('${ticket.buyerName} - CI: ${ticket.buyerIdentification ?? 'Sin Identificación'}'),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('CI: ${ticket.buyerIdentification ?? 'Sin Identificación'}'),
               Text('Sección: ${ticket.section.toUpperCase()}'),
               if (ticket.eventVendors != null)
                 Text('Vendedor: ${ticket.eventVendors!.name}'),

@@ -48,6 +48,38 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
     _loadUserSection();
   }
 
+  void _showSnackBar({
+    required BuildContext context,
+    required String message,
+    required Color backgroundColor,
+    IconData? icon = Icons.info_outline,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Carga los datos del usuario actual para preseleccionar la sección en el formulario.
   Future<void> _loadUserSection() async {
     try {
@@ -83,8 +115,9 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
     });
     try {
       // Llamada al servicio para obtener los responsables filtrados por sección
-      final responsibles =
-          await _responsibleService.getResponsiblesBySection(section);
+      final responsibles = await _responsibleService.getResponsiblesBySection(
+        section,
+      );
       setState(() {
         _responsibles = responsibles;
       });
@@ -111,6 +144,19 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
   /// Valida el formulario y guarda el ticket en la base de datos.
   /// Muestra mensajes de éxito o error según el resultado.
   Future<void> _submit() async {
+    final selectedRes = _responsibles.firstWhere(
+      (r) => r.studentId == _selectedResponsibleId,
+    );
+    if (!selectedRes.canSellMore) {
+      _showSnackBar(
+        context: context,
+        message:
+            'Este estudiante ha alcanzado el límite de tickets (${selectedRes.ticketMax}).',
+        backgroundColor: Colors.orangeAccent[700]!,
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
     // 1. Guardián para evitar ejecuciones concurrentes
     if (_isSaving) return;
 
@@ -146,70 +192,39 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
         _serieController.clear();
         _buyerNameController.clear();
         _buyerIdentificationController.clear();
+        await _loadResponsibles(_selectedSection);
         setState(() {
           _selectedResponsibleId = null;
         });
         // No limpiamos la sección para que el usuario pueda agregar varios tickets de la misma sección
 
         // FeedBack de exito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 19.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: const Color.fromARGB(255, 47, 250, 54),
-          ),
+        _showSnackBar(
+          context: context,
+          message: message,
+          backgroundColor: Colors.green,
+          icon: Icons.check_circle_outline,
         );
         // Navigator.of(context).pop(true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 19.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackBar(
+          context: context,
+          message: message,
+          backgroundColor: Colors.red,
+          icon: Icons.error_outline,
         );
       }
     } on Exception catch (e) {
       if (!mounted) return;
 
-      if (e.toString().contains('duplicado')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: Ya existe un ticket con el número de ticket ${_serieController.text.trim()}',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error inesperado: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      final errorMsg = e.toString().contains('duplicado')
+          ? 'Ya existe un ticket con el número de ticket #${_serieController.text.trim()}'
+          : 'Error inesperado: ${e.toString()}';
+
+          _showSnackBar(context: context, message: errorMsg, backgroundColor: Colors.orange[800]!, icon: Icons.priority_high,);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error de conexión o inesperado'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      await Future.delayed(
-        const Duration(microseconds: 500),
-      ); // Pequeña pausa para mostrar el mensaje
+        _showSnackBar(context: context, message: 'Error de conexión o inesperado', backgroundColor: Colors.red, icon: Icons.cloud_off,);
     } finally {
       if (mounted) {
         setState(() {
@@ -305,36 +320,72 @@ class _AddTicketScreenState extends State<AddTicketScreen> {
 
                   const SizedBox(height: 16),
 
-                    _isLoadingResponsibles
-                        ? const Center(child: CircularProgressIndicator())
-                        : DropdownButtonFormField<String>(
-                            value: _selectedResponsibleId,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: 'Estudiante responsable',
-                              border: OutlineInputBorder(),
-                              // Si no hay responsables disponibles, mostramos un mensaje en el hint
-
-                            ),
-                            hint: const Text('Selecciona el estudiante'),
-                            items: _responsibles.map<DropdownMenuItem<String>>((EventResponsible res){
+                  _isLoadingResponsibles
+                      ? const Center(child: CircularProgressIndicator())
+                      : DropdownButtonFormField<String>(
+                        value: _selectedResponsibleId,
+                        isExpanded: true,
+                        itemHeight: 60,
+                        isDense: false,
+                        decoration: InputDecoration(
+                          labelText: 'Estudiante responsable',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 5,
+                          ),
+                          // Si no hay responsables disponibles, mostramos un mensaje en el hint
+                        ),
+                        hint: const Text('Selecciona el estudiante'),
+                        items:
+                            _responsibles.map<DropdownMenuItem<String>>((
+                              EventResponsible res,
+                            ) {
+                              final bool isLimitReached =
+                                  res.ticketCount >= res.ticketMax;
                               return DropdownMenuItem<String>(
-                                value: res.studentId,                                
-                                child: Text(res.name),
+                                value: res.studentId,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      res.name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Ticket: ${res.ticketCount}/ ${res.ticketMax}',
+                                      style: TextStyle(
+                                        color:
+                                            isLimitReached
+                                                ? Colors.red
+                                                : Colors.green,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                             }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedResponsibleId = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Selecciona un estudiante responsable';
-                              }
-                              return null;
-                            },
-                          ),
+                        onChanged: (value) {
+                          // agregar validación. capturar el valor de la sumatoria. Ticketcount < TicketMax
+
+                          setState(() {
+                            _selectedResponsibleId = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Selecciona un estudiante responsable';
+                          }
+                          return null;
+                        },
+                      ),
 
                   const SizedBox(height: 30),
                   // Botón para guardar el ticket

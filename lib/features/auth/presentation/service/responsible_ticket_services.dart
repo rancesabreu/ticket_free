@@ -10,12 +10,6 @@ class ResponsibleTicketServices {
     String section,
   ) async {
     try {
-      // Convertir a Mayuscula para asegurar consistencia
-      // final response = await _supabase
-      //     .from('event_responsible_tickets')
-      //     .select('''id, name, section''')
-      //     .eq('section', section.toUpperCase())
-      //     .order('name', ascending: true); // lista de estudiantes ordenada por nombre
 
       final response = await _supabase
           .from('event_responsible_tickets')
@@ -23,6 +17,7 @@ class ResponsibleTicketServices {
       id, 
       name, 
       section,
+      ticket_max,
       event_tickets_qr(count)
     ''')
           .eq('section', section.toUpperCase())
