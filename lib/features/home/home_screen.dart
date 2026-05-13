@@ -19,18 +19,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final EventTicketService ticketService = EventTicketService();
   final SpbaseAuthService _authService = SpbaseAuthService();
 
-  List<EventTicket> listaProcesados = [];
-  List<EventTicket> listaFaltantes = [];
+  late ValueNotifier<List<EventTicket>> procesadosNotifier;
+  late ValueNotifier<List<EventTicket>> faltantesNotifier;
   bool isLoading = true;
   String userName = 'Usuario';
 
-  late PageController pageController;
+  int currentIndex = 0;
   TicketView vistaActual = TicketView.procesados;
 
   @override
   void initState() {
     super.initState();
-    pageController = PageController(initialPage: 0);
+    procesadosNotifier = ValueNotifier([]);
+    faltantesNotifier = ValueNotifier([]);
     loadTickets();
     loadUserName();
   }
@@ -49,11 +50,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final tickets = await ticketService.getAllTickets();
       debugPrint('Tickets cargados: ${tickets.length}');
 
+      if (tickets.isNotEmpty) {
+        procesadosNotifier.value = tickets.where((t) => t.isProcessed).toList();
+        faltantesNotifier.value = tickets.where((t) => !t.isProcessed).toList();
+      }
       setState(() {
-        if (tickets.isNotEmpty) {
-          listaProcesados = tickets.where((t) => t.isProcessed).toList();
-          listaFaltantes = tickets.where((t) => !t.isProcessed).toList();
-        }
         isLoading = false;
       });
     } catch (e) {
@@ -178,12 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        pageController.animateToPage(
-                          0,
-                          duration: Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
                         setState(() {
+                          currentIndex = 0;
                           vistaActual = TicketView.procesados;
                         });
                       },
@@ -198,12 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: () {
-                        pageController.animateToPage(
-                          1,
-                          duration: Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
                         setState(() {
+                          currentIndex = 1;
                           vistaActual = TicketView.faltantes;
                         });
                       },
@@ -221,11 +214,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            Text(
-              vistaActual == TicketView.procesados
-                  ? 'Total: ${listaProcesados.length}'
-                  : 'Total: ${listaFaltantes.length}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ValueListenableBuilder<List<EventTicket>>(
+              valueListenable: vistaActual == TicketView.procesados ? procesadosNotifier : faltantesNotifier,
+              builder: (context, tickets, child) => Text(
+                'Total: ${tickets.length}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
 
             isLoading
@@ -236,20 +230,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       await loadUserName();
                       await loadTickets();
                     },
-                    child: PageView(
-                      controller: pageController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      onPageChanged: (index) {
-                        setState(() {
-                          vistaActual =
-                              index == 0
-                                  ? TicketView.procesados
-                                  : TicketView.faltantes;
-                        });
-                      },
+                    child: IndexedStack(
+                      index: currentIndex,
                       children: [
-                        TicketsListView(tickets: listaProcesados),
-                        TicketsListView(tickets: listaFaltantes),
+                        TicketsListView(ticketsNotifier: procesadosNotifier),
+                        TicketsListView(ticketsNotifier: faltantesNotifier),
                       ],
                     ),
                   ),
@@ -258,5 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    procesadosNotifier.dispose();
+    faltantesNotifier.dispose();
+    super.dispose();
   }
 }
