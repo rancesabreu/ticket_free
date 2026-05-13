@@ -1,4 +1,4 @@
-package com.example.ticket_free
+package com.ticketfree.app
 
 import io.flutter.embedding.android.FlutterActivity
 
