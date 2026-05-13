@@ -96,9 +96,9 @@ class MainScreen extends StatelessWidget {
                     'La mejor forma de gestionar tus eventos',
                     style: TextStyle(fontSize: 18, color: Colors.white70),
                   ),
-                  const SizedBox(height: 545),
+                  const Spacer(),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -112,6 +112,7 @@ class MainScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

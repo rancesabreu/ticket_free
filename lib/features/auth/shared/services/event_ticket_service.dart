@@ -20,12 +20,21 @@ class EventTicketService {
       }
 
       final id = partes[1].trim();
+      final idSerie = int.tryParse(partes[0]); 
+      
+      if(idSerie == null || idSerie <= 0 || idSerie > 1425) {
+        return 'Número de ticket inválido en el código QR.';
+      }     
 
       // Buscar ticket en la base
       final existing = await getTicketById(id);
 
       if (existing == null) {
         return 'Código no existe';
+      }
+
+      if(existing.idSerie != idSerie) {
+        return 'Número de ticket no coincide con el código QR.';  
       }
 
       if (existing.isProcessed) {
@@ -149,7 +158,11 @@ class EventTicketService {
             event_vendors (
               id,
               name
-            )
+            ),
+            event_responsible_tickets (
+              id,
+              name           
+        )
           ''')
           .order('id_serie', ascending: true)
           .range(from, to);

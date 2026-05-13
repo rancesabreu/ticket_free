@@ -232,9 +232,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : Expanded(
                   child: RefreshIndicator(
-                    onRefresh: loadTickets,
+                    onRefresh: () async {
+                      await loadUserName();
+                      await loadTickets();
+                    },
                     child: PageView(
                       controller: pageController,
+                      physics: const AlwaysScrollableScrollPhysics(),
                       onPageChanged: (index) {
                         setState(() {
                           vistaActual =

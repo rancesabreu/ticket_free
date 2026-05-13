@@ -9,9 +9,23 @@ class TicketsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tickets.isEmpty) {
-      return const Center(child: Text('No hay tickets escaneados'));
+      // Ajuste: Usamos un CustomScrollView o SingleChildScrollView con AlwaysScrollableScrollPhysics
+      return LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Container(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: const Center(
+                child: Text('No hay tickets escaneados'),
+              ),
+            ),
+          ],
+        ),
+      );
     }
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: tickets.length,
       itemBuilder: (context, index) {
         final ticket = tickets[index];
@@ -26,9 +40,7 @@ class TicketsListView extends StatelessWidget {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Sección: ${ticket.section.toUpperCase()}'),
-              if (ticket.eventVendors != null)
-                Text('Vendedor: ${ticket.eventVendors!.name}'),
+              Text('${ticket.eventResponsibleTickets?.name ?? 'Sin Responsable'} (${ticket.section.toUpperCase()})')            
             ],
           ),
 

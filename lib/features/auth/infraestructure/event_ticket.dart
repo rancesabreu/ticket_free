@@ -9,6 +9,7 @@ class EventTicket {
   final String section; // Sección de estudio del vendedor que registra el ticket
   final String? vendorEmail; // Email del vendedor que registra el ticket
   final EventVendor? eventVendors;
+  final EventResponsibleTicket? eventResponsibleTickets;
 
   EventTicket({
     required this.id,
@@ -21,6 +22,7 @@ class EventTicket {
     this.vendorId,
     this.vendorEmail,
     this.eventVendors,
+    this.eventResponsibleTickets,
   });
 
   factory EventTicket.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,10 @@ class EventTicket {
       eventVendors:
           json['event_vendors'] != null
               ? EventVendor.fromJson(json['event_vendors'])
+              : null,
+      eventResponsibleTickets:
+          json['event_responsible_tickets'] != null
+              ? EventResponsibleTicket.fromJson(json['event_responsible_tickets'])
               : null,
     );
   }
@@ -78,3 +84,29 @@ class EventTicket {
         };
       }
     }
+
+ class EventResponsibleTicket{
+       final String id;
+      final String name;
+
+      EventResponsibleTicket({
+        required this.id,
+        required this.name,
+      });
+
+      
+       factory EventResponsibleTicket.fromJson(Map<String, dynamic> json) {
+        return EventResponsibleTicket(
+          id: json['id'],
+          name: json['name'],
+        );
+      }
+
+      Map<String, dynamic> toJson() {
+        return {
+          'id': id,
+          'name':  name,
+        };
+      }
+
+      }    
